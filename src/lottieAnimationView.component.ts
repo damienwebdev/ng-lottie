@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, Output, EventEmitter, ViewChild, ElementRef, PLATFORM_ID, Inject } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, ViewChild, ElementRef, PLATFORM_ID, Inject, NgZone } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 
 declare let require: any;
@@ -13,7 +13,7 @@ const lottie: any = require('lottie-web/build/player/lottie.js');
 
 export class LottieAnimationViewComponent implements OnInit {
     
-    constructor(@Inject(PLATFORM_ID) private platformId: string) {}
+    constructor(@Inject(PLATFORM_ID) private platformId: string, private zone: NgZone) {}
 
     @Input() options: any;
     @Input() width: number;
@@ -26,6 +26,7 @@ export class LottieAnimationViewComponent implements OnInit {
     public viewWidth: string;
     public viewHeight: string;
     private _options: any;
+    private _anim: any;
 
     ngOnInit() {
         
@@ -45,7 +46,14 @@ export class LottieAnimationViewComponent implements OnInit {
         this.viewWidth = this.width + 'px' || '100%';
         this.viewHeight = this.height + 'px' || '100%';
 
-        let anim: any = lottie.loadAnimation(this._options);
-        this.animCreated.emit(anim);
+        this.zone.runOutsideAngular(() => {
+            this._anim = lottie.loadAnimation(this._options);
+        })
+
+        this._anim.addEventListener('data_ready',() => {
+            this.zone.run(() => {
+                this.animCreated.emit(this._anim);
+            });
+        });
     }
 }
